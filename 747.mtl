@@ -1,0 +1,91 @@
+# Exported from Wings 3D 1.2
+newmtl Default_Material
+Ns 100.0
+d 1.0
+illum 2
+Kd 1.0 1.0 1.0
+Ka 1.0 1.0 1.0
+Ks 0.0 0.0 0.0
+Ke 0.0 0.0 0.0
+
+newmtl _EXHAUST_PORTS1
+Ns 100.0
+d 1.0
+illum 2
+Kd 0.0 0.0 0.0
+Ka 1.0 1.0 1.0
+Ks 0.0 0.0 0.0
+Ke 0.0 0.0 0.0
+
+newmtl __Black_
+Ns 100.0
+d 1.0
+illum 2
+Kd 0.0 0.0 0.0
+Ka 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ke 0.0 0.0 0.0
+
+newmtl __Blue_Glass_
+Ns 100.0
+d 1.0
+illum 2
+Kd 0.3922 0.5843 0.9294
+Ka 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ke 0.0 0.0 0.0
+
+newmtl __DimGray_
+Ns 100.0
+d 1.0
+illum 2
+Kd 0.4118 0.4118 0.4118
+Ka 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ke 0.0 0.0 0.0
+
+newmtl __DimGray_1
+Ns 100.0
+d 1.0
+illum 2
+Kd 0.0118 0.1451 0.549
+Ka 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ke 0.0 0.0 0.0
+
+newmtl __DimGray_2
+Ns 100.0
+d 1.0
+illum 2
+Kd 0.1216 0.5059 0.8078
+Ka 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ke 0.0 0.0 0.0
+
+newmtl __Silver_
+Ns 100.0
+d 1.0
+illum 2
+Kd 0.7529 0.7529 0.7529
+Ka 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ke 0.0 0.0 0.0
+
+newmtl __White_
+Ns 100.0
+d 1.0
+illum 2
+Kd 1.0 1.0 1.0
+Ka 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ke 0.0 0.0 0.0
+
+newmtl default
+Ns 100.0
+d 1.0
+illum 2
+Kd 1.0 1.0 1.0
+Ka 1.0 1.0 1.0
+Ks 1.0 1.0 1.0
+Ke 0.0 0.0 0.0
+
