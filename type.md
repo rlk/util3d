@@ -2,6 +2,9 @@
 
 This module implements a mechanism for rendering text using OpenGL. This may be used to add GUI elements and labels in both 3D scenes and in 2D overlays.
 
+-   [type.c](type.c)
+-   [type.h](type.h)
+
 A `line` of text is drawn as a series of textured quads using a single `font`. Each quad appears as a single glyph. All quads in a `line` are stored in a single vertex buffer object, and all glyphs in a `font` are represented in a single texture.
 
 Despite its name, one `line` may give many thousands of distinct textual elements, each with an independant 3D transformation. This mechanism enables the very efficient display of great quantities of text with only a single texture binding and a single vertex batch.

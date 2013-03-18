@@ -4,6 +4,9 @@ This module implements a right-handed 3D mathematics library supporting three-co
 
 By default, `real` is `typedef`-ed to `double`. However, `float` is used instead if the preprocessor symbol `CONFIG_MATH3D_FLOAT` is defined during inclusion of `math3d.h` and compilation of `math3d.c`.
 
+-   [math3d.c](math3d.c)
+-   [math3d.h](math3d.h)
+
 Array layout is as follows. Note that the quaternion scalar part follows the vector part, allowing vector functions to operate upon the vector part of a quaternion. Also, the matrix representation is column-wise, matching the layout expected by OpenGL. Here, *a<sub><small>ij</small></sub>* is the element at row *i*, column *j*.
 
 <table style="text-align:center;border:none">

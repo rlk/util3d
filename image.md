@@ -2,6 +2,9 @@
 
 This module implements a basic image I/O library supporting the reading and writing of PNG and JPEG images. It provides a uniform simplified front-end to [libpng](http://www.libpng.org/), [libtiff](http://www.remotesensing.org/libtiff/), [libjpeg](http://www.ijg.org/), and [OpenEXR](http://www.openexr.com/). Usable color depths and channel counts vary depending on format.
 
+-   [image.c](image.c)
+-   [image.h](image.h)
+
 ## Compilation
 
 To use this module, simply link it with your own code and the supporting libraries for all necessary image formats.

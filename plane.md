@@ -1,6 +1,9 @@
 # plane
 
-This modules a simple gridded plane using OpenGL. The look of it is patterned after the cover of Edward Tufte's [Visual Explanations](http://www.amazon.com/Visual-Explanations-Quantities-Evidence-Narrative/dp/0961392126). The plane is often useful as a backdrop to simple 3D demos, and can help work through those dreaded blank screen bugs. In addition, it represents an example of basic vertex buffer object creation, population, and rendering.
+This module is a very basic OpenGL code that renders a simple gridded plane as on the cover of Edward Tufte's [Visual Explanations](http://www.amazon.com/Visual-Explanations-Quantities-Evidence-Narrative/dp/0961392126). The plane is often useful as a backdrop to simple 3D demos, and can help work through those dreaded blank screen bugs. In addition, it represents an example of basic vertex buffer object creation, population, and rendering.
+
+-   [plane.c](plane.c)
+-   [plane.h](plane.h)
 
 ## Compilation
 

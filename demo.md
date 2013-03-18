@@ -2,6 +2,9 @@
 
 This module implements a trivial framework for OpenGL demonstration. It is appropriate for the interactive presentation of rendering techniques and animations, but provides few facilities for mapping user input onto application control. A demo implementation using this module need only provide a function to perform rendering and, optionally, functions for setup, shutdown, and animation.
 
+-   [demo.c](demo.c)
+-   [demo.h](demo.h)
+
 The module maintains several pieces of internal state including the position, orientation, and zoom value of the camera, and the direction toward the primary light source. Upon rendering, the camera zoom is loaded into the OpenGL projection matrix, the position and orientation are loaded into the OpenGL model-view matrix, the primary light source direction is loaded into `GL_LIGHT0`, and the mouse pointer vector is loaded into `GL_LIGHT1`.
 
 The demo module is implemented using [GLUT](http://www.opengl.org/resources/libraries/glut/), and applications are free to co-opt any GLUT features not used internally. Notably, this includes [GLUT's menu functions](http://www.opengl.org/resources/libraries/glut/spec3/node35.html#SECTION00070000000000000000), which applications may use for interactive feature selection and configuration.

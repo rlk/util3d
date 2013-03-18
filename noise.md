@@ -2,6 +2,9 @@
 
 This module implements a three-dimensional coherent noise generator using the Simplex method of Ken Perlin, as described in <a href="http://www.csee.umbc.edu/~olano/s2002c36/ch02.pdf"><i>Real-Time Shading SIGGRAPH Course Notes (2001)</i>, Chapter 2: Noise Hardware.</a> The output is deterministic, but infinite and non-repeating in all directions.
 
+-   [noise.c](noise.c)
+-   [noise.h](noise.h)
+
 ## API
 
 - `double noise_sample(double x, double y, double z)`

@@ -2,6 +2,9 @@
 
 `obj` loads, manipulates, optimizes, renders, and stores 3D geometry using the Wavefront OBJ file format.
 
+-   [obj.c](obj.c)
+-   [obj.h](obj.h)
+
 An OBJ file consists of sets of *materials*, *vertices*, and *surfaces*. A surface consists of sets of *polygons* and *lines* with a reference to a material to be used when rendering them. A polygon is a triplet of references to vertices in the file, and a line is a pair of references to vertices.
 
 OBJ files are referenced using pointers to type `obj`. The elements within the OBJ are referenced by integer index. These indices work much like a file or socket descriptor. The internal geometry representation is not accessible to the application. All operations on geometry are performed using the API documented here.

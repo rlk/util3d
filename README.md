@@ -18,4 +18,4 @@
 
 -   [`noise`](noise.md) &mdash; Implements a 3D coherent noise generator using the Simplex method of Ken Perlin.
 
--   [`plane`](plane.md) &mdash; Renders a simple 3D plane using OpenGL.Useful as a basic scene backdrop.
+-   [`plane`](plane.md) &mdash; Renders a simple 3D plane using OpenGL. Useful as a basic scene backdrop.

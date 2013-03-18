@@ -4,6 +4,15 @@ This module renders the 3D reference cube using OpenGL. It is useful for testing
 
 To better enable a concrete understanding of 3D transforms, a real-world instance of the 3D reference cube may be constructed from paper or cardstock [using this template PDF](cube.pdf).
 
+-   [cube.c](cube.c)
+-   [cube.h](cube.h)
+-   [cubepx.png](cubepx.png)
+-   [cubenx.png](cubenx.png)
+-   [cubepy.png](cubepy.png)
+-   [cubeny.png](cubeny.png)
+-   [cubepz.png](cubepz.png)
+-   [cubenz.png](cubenz.png)
+
 ## Compilation
 
 To use this module, simply link it with your own code. It requires OpenGL, [GLEW](http://glew.sourceforge.net/), and the [`image`](image.html#config) utility. To load the cube texture images, the `image` utility requires the PNG libraries.

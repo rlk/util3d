@@ -1,6 +1,11 @@
 # glsl
 
-This API consists of an extremely simple structure of OpenGL objects and a small set of functions that operate upon it. The structure contains a program object, vertex and fragment shader objects, and character pointers used to cache shader file names, if provided.
+This API consists of an extremely simple structure of OpenGL objects and a small set of functions that operate upon it.
+
+-   [glsl.c](glsl.c)
+-   [glsl.h](glsl.h)
+
+The structure contains a program object, vertex and fragment shader objects, and character pointers used to cache shader file names, if provided.
 
     struct glsl
     {
