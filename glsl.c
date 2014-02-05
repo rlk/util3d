@@ -173,7 +173,6 @@ GLuint glsl_init_program(GLuint shader_vert,
     return 0;
 }
 
-
 /*----------------------------------------------------------------------------*/
 
 GLboolean glsl_source(glsl *G, const char *vert_str, int vert_len,

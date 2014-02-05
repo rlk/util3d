@@ -25,9 +25,10 @@
 #include <assert.h>
 #include <math.h>
 
+#ifndef CONF_NO_GL
 #include <GL/glew.h>
-
 #include "image.h"
+#endif
 
 #define MAXSTR 1024
 
@@ -45,9 +46,9 @@
 
 struct obj_prop
 {
-    char  *str;
-    int    opt;
-    GLuint map;
+    char        *str;
+    int          opt;
+    unsigned int map;
 
     float c[4];
     float o[3];
@@ -88,8 +89,8 @@ struct obj_surf
     int lc;
     int lm;
 
-    GLuint pibo;
-    GLuint libo;
+    unsigned int pibo;
+    unsigned int libo;
 
     struct obj_poly *pv;
     struct obj_line *lv;
@@ -97,7 +98,7 @@ struct obj_surf
 
 struct obj
 {
-    GLuint vbo;
+    unsigned int vbo;
 
     int mc;
     int mm;
@@ -259,8 +260,9 @@ static void normal(float *n, const float *a,
 
 unsigned int obj_load_image(const char *filename)
 {
-    GLuint o = 0;
+    unsigned int o = 0;
 
+#ifndef CONF_NO_GL
     if (filename)
     {
         int   w;
@@ -296,6 +298,8 @@ unsigned int obj_load_image(const char *filename)
             free(p);
         }
     }
+#endif
+
     return o;
 }
 
@@ -895,16 +899,20 @@ static void obj_rel_mtrl(struct obj_mtrl *mp)
     if (mp->kv[2].str) free(mp->kv[2].str);
     if (mp->kv[3].str) free(mp->kv[3].str);
 
+#ifndef CONF_NO_GL
     if (mp->kv[0].map) glDeleteTextures(1, &mp->kv[0].map);
     if (mp->kv[1].map) glDeleteTextures(1, &mp->kv[1].map);
     if (mp->kv[2].map) glDeleteTextures(1, &mp->kv[2].map);
     if (mp->kv[3].map) glDeleteTextures(1, &mp->kv[3].map);
+#endif
 }
 
 static void obj_rel_surf(struct obj_surf *sp)
 {
+#ifndef CONF_NO_GL
     if (sp->pibo) glDeleteBuffers(1, &sp->pibo);
     if (sp->libo) glDeleteBuffers(1, &sp->libo);
+#endif
 
     sp->pibo = 0;
     sp->libo = 0;
@@ -922,7 +930,9 @@ static void obj_rel(obj *O)
 
     /* Release resources held by this file and it's materials and surfaces. */
 
+#ifndef CONF_NO_GL
     if (O->vbo) glDeleteBuffers(1, &O->vbo);
+#endif
 
     O->vbo = 0;
 
@@ -1266,8 +1276,10 @@ void obj_set_mtrl_map(obj *O, int mi, int ki, const char *str)
 {
     assert_prop(O, mi, ki);
 
+#ifndef CONF_NO_GL
     if (O->mv[mi].kv[ki].map)
         glDeleteTextures(1, &O->mv[mi].kv[ki].map);
+#endif
 
     O->mv[mi].kv[ki].map = obj_load_image(str);
     O->mv[mi].kv[ki].str = set_name(O->mv[mi].kv[ki].str, str);
@@ -1314,7 +1326,9 @@ static void invalidate(obj *O)
 {
     if (O->vbo)
     {
+#ifndef CONF_NO_GL
         glDeleteBuffers(1, &O->vbo);
+#endif
         O->vbo = 0;
     }
 }
@@ -1657,6 +1671,7 @@ void obj_proc(obj *O)
 
 void obj_init(obj *O)
 {
+#ifndef CONF_NO_GL
     if (O->vbo == 0)
     {
         int si;
@@ -1692,6 +1707,7 @@ void obj_init(obj *O)
             }
         }
     }
+#endif
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1976,6 +1992,8 @@ float obj_acmr(obj *O, int qc)
 
 /*----------------------------------------------------------------------------*/
 
+#ifndef CONF_NO_GL
+
 static void obj_render_prop(const obj *O, int mi, int ki)
 {
     const struct obj_prop *kp = O->mv[mi].kv + ki;
@@ -2097,62 +2115,6 @@ void obj_render_surf(const obj *O, int si)
     }
 }
 
-#if 1
-void obj_render_axes(const obj *O, float k)
-{
-    int vi;
-
-    assert(O);
-
-    glPushAttrib(GL_CURRENT_BIT | GL_LIGHTING_BIT | GL_ENABLE_BIT);
-    {
-        glEnable(GL_COLOR_MATERIAL);
-
-        glDisable(GL_LIGHTING);
-        glDisable(GL_TEXTURE_2D);
-
-        glBegin(GL_LINES);
-        {
-            for (vi = 0; vi < O->vc; ++vi)
-            {
-                const float *p = O->vv[vi].v;
-                const float *x = O->vv[vi].u;
-                const float *z = O->vv[vi].n;
-
-                float y[3];
-
-                /* Compute the bitangent vector. */
-
-                cross(y, z, x);
-
-                normalize(y);
-
-                /* Render the tangent-bitangent-normal basis. */
-
-                glColor3f(1.0f, 0.0f, 0.0f);
-
-                glVertex3f(p[0],            p[1],            p[2]);
-                glVertex3f(p[0] + x[0] * k, p[1] + x[1] * k, p[2] + x[2] * k);
-
-                glColor3f(0.0f, 1.0f, 0.0f);
-
-                glVertex3f(p[0],            p[1],            p[2]);
-                glVertex3f(p[0] + y[0] * k, p[1] + y[1] * k, p[2] + y[2] * k);
-
-                glColor3f(0.0f, 0.0f, 1.0f);
-
-                glVertex3f(p[0],            p[1],            p[2]);
-                glVertex3f(p[0] + z[0] * k, p[1] + z[1] * k, p[2] + z[2] * k);
-            }
-        }
-        glEnd();
-
-        glDisable(GL_COLOR_MATERIAL);
-    }
-    glPopAttrib();
-}
-#endif
-
 void obj_render(obj *O)
 {
     int si;
@@ -2182,6 +2144,14 @@ void obj_render(obj *O)
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableVertexAttribArray(6);
 }
+
+#else
+
+void obj_render(obj *O)
+{
+}
+
+#endif
 
 /*============================================================================*/
 
