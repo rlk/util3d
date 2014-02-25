@@ -81,6 +81,9 @@ void obj_set_poly(obj *, int, int, const int *);
 void obj_set_line(obj *, int, int, const int *);
 void obj_set_surf(obj *, int, int);
 
+void obj_set_vert_loc(obj *, int, int, int, int);
+void obj_set_mtrl_loc(obj *, int, int, int, int);
+
 /*----------------------------------------------------------------------------*/
 
 const char  *obj_get_mtrl_name(const obj *, int);
@@ -100,11 +103,9 @@ int  obj_get_surf(const obj *, int);
 
 /*----------------------------------------------------------------------------*/
 
-void  obj_render_vert(const obj *);
 void  obj_render_mtrl(const obj *, int);
 void  obj_render_surf(const obj *, int);
 void  obj_render_file(const obj *);
-void  obj_render_axes(const obj *, float);
 
 /*----------------------------------------------------------------------------*/
 

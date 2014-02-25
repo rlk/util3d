@@ -1,4 +1,4 @@
-/* Copyright (c) 2005 Robert Kooima                                           */
+/* Copyright (c) 2005,2013,2014 Robert Kooima                                 */
 /*                                                                            */
 /* Permission is hereby granted, free of charge, to any person obtaining a    */
 /* copy of this software and associated documentation files (the "Software"), */
@@ -26,8 +26,11 @@
 #include <math.h>
 
 #ifndef CONF_NO_GL
-#include <GL/glew.h>
-#include "image.h"
+#ifdef __APPLE__
+#  include <OpenGL/gl3.h>
+#else
+#  include <GL/glew.h>
+#endif
 #endif
 
 #define MAXSTR 1024
@@ -98,6 +101,7 @@ struct obj_surf
 
 struct obj
 {
+    unsigned int vao;
     unsigned int vbo;
 
     int mc;
@@ -106,6 +110,15 @@ struct obj
     int vm;
     int sc;
     int sm;
+
+    int uloc;
+    int nloc;
+    int tloc;
+    int vloc;
+
+    int cloc[5];
+    int oloc[5];
+    int Mloc[5];
 
     struct obj_mtrl *mv;
     struct obj_vert *vv;
@@ -258,6 +271,59 @@ static void normal(float *n, const float *a,
 
 /*============================================================================*/
 
+#pragma pack(push, 1)
+struct tga_head
+{
+    unsigned char  id_length;
+    unsigned char  color_map_type;
+    unsigned char  image_type;
+    unsigned short color_map_offset;
+    unsigned short color_map_length;
+    unsigned char  color_map_size;
+    unsigned short image_x_origin;
+    unsigned short image_y_origin;
+    unsigned short image_width;
+    unsigned short image_height;
+    unsigned char  image_depth;
+    unsigned char  image_descriptor;
+};
+#pragma pack(pop)
+
+void *read_tga(const char *filename, int *w, int *h, int *d)
+{
+    struct tga_head head;
+
+    if (FILE *stream = fopen(filename, "rb"))
+    {
+        if (fread(&head, sizeof (struct tga_head), 1, stream) == 1)
+        {
+            if (head.image_type == 2)
+            {
+                *w = int(head.image_width);
+                *h = int(head.image_height);
+                *d = int(head.image_depth);
+
+                if (fseek(stream, head.id_length, SEEK_CUR) == 0)
+                {
+                    size_t s = (*d) / 8;
+                    size_t n = (*w) * (*h);
+
+                    if (void *p = calloc(n, s))
+                    {
+                        if (fread(p, s, n, stream) == n)
+                        {
+                            fclose(stream);
+                            return p;
+                        }
+                    }
+                }
+            }
+        }
+        fclose(stream);
+    }
+    return 0;
+}
+
 unsigned int obj_load_image(const char *filename)
 {
     unsigned int o = 0;
@@ -267,31 +333,29 @@ unsigned int obj_load_image(const char *filename)
     {
         int   w;
         int   h;
-        int   c;
-        int   b;
-        void *p = image_read(filename, &w, &h, &c, &b);
+        int   d;
+        void *p;
 
         /* Read the image data from the named file to a new pixel buffer. */
 
-        if (p)
+        if ((p = read_tga(filename, &w, &h, &d)))
         {
-            image_flip(w, h, c, b, p);
-
             /* Create an OpenGL texture object using these pixels. */
 
             glGenTextures(1, &o);
             glBindTexture(GL_TEXTURE_2D, o);
 
             glTexParameteri(GL_TEXTURE_2D,
-                            GL_GENERATE_MIPMAP, GL_TRUE);
-            glTexParameteri(GL_TEXTURE_2D,
                             GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D,
-                            GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+                            GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-            glTexImage2D(GL_TEXTURE_2D, 0, image_internal_form(c, b), w, h, 0,
-                                           image_external_form(c),
-                                           image_external_type(b), p);
+            if (d == 32)
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                             GL_BGRA, GL_UNSIGNED_BYTE, p);
+            if (d == 24)
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  w, h, 0,
+                             GL_BGR,  GL_UNSIGNED_BYTE, p);
 
             /* Discard the unnecessary pixel buffer. */
 
@@ -931,7 +995,8 @@ static void obj_rel(obj *O)
     /* Release resources held by this file and it's materials and surfaces. */
 
 #ifndef CONF_NO_GL
-    if (O->vbo) glDeleteBuffers(1, &O->vbo);
+    if (O->vbo) glDeleteBuffers     (1, &O->vbo);
+    if (O->vao) glDeleteVertexArrays(1, &O->vao);
 #endif
 
     O->vbo = 0;
@@ -1402,6 +1467,28 @@ void obj_set_surf(obj *O, int si, int mi)
     O->sv[si].mi = mi;
 }
 
+/*----------------------------------------------------------------------------*/
+
+void obj_set_vert_loc(obj *O, int u, int n, int t, int v)
+{
+    assert(O);
+
+    O->uloc = u;
+    O->nloc = n;
+    O->tloc = t;
+    O->vloc = v;
+}
+
+void obj_set_prop_loc(obj *O, int pi, int c, int o, int M)
+{
+    assert(O);
+    assert(0 <= pi && pi <= 4);
+
+    O->cloc[pi] = c;
+    O->oloc[pi] = o;
+    O->Mloc[pi] = M;
+}
+
 /*============================================================================*/
 
 const char *obj_get_mtrl_name(const obj *O, int mi)
@@ -1672,17 +1759,24 @@ void obj_proc(obj *O)
 void obj_init(obj *O)
 {
 #ifndef CONF_NO_GL
-    if (O->vbo == 0)
+    if (O->vao == 0)
     {
+        const size_t vs = sizeof (struct obj_vert);
+        const size_t ps = sizeof (struct obj_poly);
+        const size_t ls = sizeof (struct obj_line);
+
         int si;
+
+        /* Store the following bindings in a vertex array object. */
+
+        glGenVertexArrays(1, &O->vao);
+        glBindVertexArray(    O->vao);
 
         /* Store all vertex data in a vertex buffer object. */
 
         glGenBuffers(1, &O->vbo);
         glBindBuffer(GL_ARRAY_BUFFER, O->vbo);
-        glBufferData(GL_ARRAY_BUFFER,
-                     O->vc * sizeof (struct obj_vert),
-                     O->vv,  GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, O->vc * vs, O->vv, GL_STATIC_DRAW);
 
         /* Store all index data in index buffer objects. */
 
@@ -1692,19 +1786,40 @@ void obj_init(obj *O)
             {
                 glGenBuffers(1, &O->sv[si].pibo);
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, O->sv[si].pibo);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                             O->sv[si].pc * sizeof (struct obj_poly),
-                             O->sv[si].pv, GL_STATIC_DRAW);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, O->sv[si].pc * ps,
+                                        O->sv[si].pv, GL_STATIC_DRAW);
             }
 
             if (O->sv[si].lc > 0)
             {
                 glGenBuffers(1, &O->sv[si].libo);
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, O->sv[si].libo);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                             O->sv[si].lc * sizeof (struct obj_line),
-                             O->sv[si].lv, GL_STATIC_DRAW);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, O->sv[si].lc * ls,
+                                        O->sv[si].lv, GL_STATIC_DRAW);
             }
+        }
+
+        /* Enable and bind the attributes. */
+
+        if (O->uloc >= 0)
+        {
+            glEnableVertexAttribArray(O->uloc);
+            glVertexAttribPointer(O->uloc, 3, GL_FLOAT, GL_FALSE, vs, (const GLvoid *)  0);
+        }
+        if (O->nloc >= 0)
+        {
+            glEnableVertexAttribArray(O->nloc);
+            glVertexAttribPointer(O->nloc, 3, GL_FLOAT, GL_FALSE, vs, (const GLvoid *) 12);
+        }
+        if (O->tloc >= 0)
+        {
+            glEnableVertexAttribArray(O->tloc);
+            glVertexAttribPointer(O->tloc, 2, GL_FLOAT, GL_FALSE, vs, (const GLvoid *) 24);
+        }
+        if (O->vloc >= 0)
+        {
+            glEnableVertexAttribArray(O->vloc);
+            glVertexAttribPointer(O->vloc, 3, GL_FLOAT, GL_FALSE, vs, (const GLvoid *) 32);
         }
     }
 #endif
@@ -2016,7 +2131,7 @@ static void obj_render_prop(const obj *O, int mi, int ki)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 
         /* Apply the texture coordinate offset and scale. */
-
+#if 0
         glMatrixMode(GL_TEXTURE);
         {
             glLoadIdentity();
@@ -2024,23 +2139,8 @@ static void obj_render_prop(const obj *O, int mi, int ki)
             glScalef    (kp->s[0], kp->s[1], kp->s[2]);
         }
         glMatrixMode(GL_MODELVIEW);
+#endif
     }
-}
-
-#define OFFSET(i) ((char *) NULL + (i))
-
-void obj_render_vert(const obj *O)
-{
-    GLsizei s = sizeof (struct obj_vert);
-
-    /* Bind attributes to a vertex buffer object. */
-
-    glBindBuffer(GL_ARRAY_BUFFER, O->vbo);
-
-    glVertexAttribPointer(6, 3, GL_FLOAT, 0, s, OFFSET( 0));
-    glNormalPointer      (      GL_FLOAT,    s, OFFSET(12));
-    glTexCoordPointer    (2,    GL_FLOAT,    s, OFFSET(24));
-    glVertexPointer      (3,    GL_FLOAT,    s, OFFSET(32));
 }
 
 void obj_render_mtrl(const obj *O, int mi)
@@ -2074,12 +2174,13 @@ void obj_render_mtrl(const obj *O, int mi)
     glActiveTexture(GL_TEXTURE0);
 
     /* Apply the material properties. */
-
+#if 0
     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   O->mv[mi].kv[OBJ_KD].c);
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,   O->mv[mi].kv[OBJ_KA].c);
     glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION,  O->mv[mi].kv[OBJ_KE].c);
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  O->mv[mi].kv[OBJ_KS].c);
     glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, O->mv[mi].kv[OBJ_NS].c);
+#endif
 }
 
 void obj_render_surf(const obj *O, int si)
@@ -2098,8 +2199,7 @@ void obj_render_surf(const obj *O, int si)
         if (sp->pibo)
         {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sp->pibo);
-            glDrawElements(GL_TRIANGLES, 3 * sp->pc,
-                           GL_INDEX_T, OFFSET(0));
+            glDrawElements(GL_TRIANGLES, 3 * sp->pc, GL_INDEX_T, (const GLvoid *) 0);
         }
 
         /* Render all lines. */
@@ -2107,8 +2207,7 @@ void obj_render_surf(const obj *O, int si)
         if (sp->libo)
         {
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sp->libo);
-            glDrawElements(GL_LINES, 2 * sp->lc,
-                           GL_INDEX_T, OFFSET(0));
+            glDrawElements(GL_LINES, 2 * sp->lc, GL_INDEX_T, (const GLvoid *) 0);
         }
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -2121,28 +2220,15 @@ void obj_render(obj *O)
 
     assert(O);
 
+    /* Load the vertex buffer. */
+
     obj_init(O);
+    glBindVertexArray(O->vao);
 
-    /* Enable all necessary vertex attribute pointers. */
+    /* Render each surface. */
 
-    glEnableVertexAttribArray(6);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glEnableClientState(GL_NORMAL_ARRAY);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    {
-        /* Load the vertex buffer. */
-
-        obj_render_vert(O);
-
-        /* Render each surface. */
-
-        for (si = 0; si < O->sc; ++si)
-            obj_render_surf(O, si);
-    }
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_NORMAL_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glDisableVertexAttribArray(6);
+    for (si = 0; si < O->sc; ++si)
+        obj_render_surf(O, si);
 }
 
 #else
