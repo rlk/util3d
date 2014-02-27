@@ -62,7 +62,7 @@ struct obj_mtrl
 {
     char *name;
 
-    struct obj_prop kv[5];
+    struct obj_prop kv[OBJ_PROP_COUNT];
 };
 
 struct obj_vert
@@ -116,9 +116,9 @@ struct obj
     int tloc;
     int vloc;
 
-    int cloc[5];
-    int oloc[5];
-    int Mloc[5];
+    int cloc[OBJ_PROP_COUNT];
+    int oloc[OBJ_PROP_COUNT];
+    int Mloc[OBJ_PROP_COUNT];
 
     struct obj_mtrl *mv;
     struct obj_vert *vv;
@@ -141,7 +141,7 @@ static void invalidate(obj *);
 #define assert_poly(O, i, j) \
       { assert_surf(O, i); assert(0 <= j && j < O->sv[i].pc); }
 #define assert_prop(O, i, j) \
-      { assert_mtrl(O, i); assert(0 <= j && j < 5); }
+      { assert_mtrl(O, i); assert(0 <= j && j < OBJ_PROP_COUNT); }
 
 /*============================================================================*/
 /* Vector cache                                                               */
@@ -345,10 +345,8 @@ unsigned int obj_load_image(const char *filename)
             glGenTextures(1, &o);
             glBindTexture(GL_TEXTURE_2D, o);
 
-            glTexParameteri(GL_TEXTURE_2D,
-                            GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D,
-                            GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
             if (d == 32)
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
@@ -356,6 +354,8 @@ unsigned int obj_load_image(const char *filename)
             if (d == 24)
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,  w, h, 0,
                              GL_BGR,  GL_UNSIGNED_BYTE, p);
+
+            glGenerateMipmap(GL_TEXTURE_2D);
 
             /* Discard the unnecessary pixel buffer. */
 
@@ -439,10 +439,8 @@ static void read_image(obj *O, int mi, int ki, const char *line,
 
         /* Check for a file name */
 
-        else if ((end = strstr(line, ".png"))) { strncpy(map, line, end - line + 4); break; }
-        else if ((end = strstr(line, ".PNG"))) { strncpy(map, line, end - line + 4); break; }
-        else if ((end = strstr(line, ".jpg"))) { strncpy(map, line, end - line + 4); break; }
-        else if ((end = strstr(line, ".JPG"))) { strncpy(map, line, end - line + 4); break; }
+        else if ((end = strstr(line, ".tga"))) { strncpy(map, line, end - line + 4); break; }
+        else if ((end = strstr(line, ".TGA"))) { strncpy(map, line, end - line + 4); break; }
 
         /* If we see something we don't recognize, stop looking. */
 
@@ -540,6 +538,8 @@ static void read_mtl(const char *path,
                         read_image(O, mi, OBJ_KS, c, path);
                     else if (!strcmp(key, "map_Ns"))
                         read_image(O, mi, OBJ_NS, c, path);
+                    else if (!strcmp(key, "map_Kn"))
+                        read_image(O, mi, OBJ_KN, c, path);
 
                     else if (!strcmp(key, "Kd"))
                         read_color(O, mi, OBJ_KD, c);
@@ -958,17 +958,15 @@ static void obj_rel_mtrl(struct obj_mtrl *mp)
 {
     /* Release any resources held by this material. */
 
-    if (mp->kv[0].str) free(mp->kv[0].str);
-    if (mp->kv[1].str) free(mp->kv[1].str);
-    if (mp->kv[2].str) free(mp->kv[2].str);
-    if (mp->kv[3].str) free(mp->kv[3].str);
+    int ki;
 
+    for (ki = 0; ki < OBJ_PROP_COUNT; ki++)
+    {
+        if (mp->kv[ki].str) free(mp->kv[ki].str);
 #ifndef CONF_NO_GL
-    if (mp->kv[0].map) glDeleteTextures(1, &mp->kv[0].map);
-    if (mp->kv[1].map) glDeleteTextures(1, &mp->kv[1].map);
-    if (mp->kv[2].map) glDeleteTextures(1, &mp->kv[2].map);
-    if (mp->kv[3].map) glDeleteTextures(1, &mp->kv[3].map);
+        if (mp->kv[ki].map) glDeleteTextures(1, &mp->kv[ki].map);
 #endif
+    }
 }
 
 static void obj_rel_surf(struct obj_surf *sp)
@@ -1010,6 +1008,7 @@ static void obj_rel(obj *O)
 obj *obj_create(const char *filename)
 {
     obj *O;
+    int  i;
 
     /* Allocate and initialize a new file. */
 
@@ -1026,6 +1025,19 @@ obj *obj_create(const char *filename)
             obj_mini(O);
             obj_proc(O);
         }
+
+        /* Set default shader locations. */
+
+        for (i = 0; i < OBJ_PROP_COUNT; i++)
+        {
+            O->cloc[i] = -1;
+            O->oloc[i] = -1;
+            O->Mloc[i] = -1;
+        }
+        O->uloc = -1;
+        O->nloc = -1;
+        O->tloc = -1;
+        O->vloc = -1;
     }
     return O;
 }
@@ -1069,6 +1081,7 @@ int obj_add_mtrl(obj *O)
         obj_set_mtrl_opt(O, mi, OBJ_KE, opt);
         obj_set_mtrl_opt(O, mi, OBJ_KS, opt);
         obj_set_mtrl_opt(O, mi, OBJ_NS, opt);
+        obj_set_mtrl_opt(O, mi, OBJ_KN, opt);
 
         obj_set_mtrl_c  (O, mi, OBJ_KD, Kd);
         obj_set_mtrl_c  (O, mi, OBJ_KA, Ka);
@@ -1081,6 +1094,7 @@ int obj_add_mtrl(obj *O)
         obj_set_mtrl_s  (O, mi, OBJ_KE, s);
         obj_set_mtrl_s  (O, mi, OBJ_KS, s);
         obj_set_mtrl_s  (O, mi, OBJ_NS, s);
+        obj_set_mtrl_s  (O, mi, OBJ_KN, s);
     }
     return mi;
 }
@@ -1389,13 +1403,12 @@ void obj_set_mtrl_o(obj *O, int mi, int ki, const float o[3])
 
 static void invalidate(obj *O)
 {
-    if (O->vbo)
-    {
 #ifndef CONF_NO_GL
-        glDeleteBuffers(1, &O->vbo);
+    if (O->vbo) glDeleteBuffers     (1, &O->vbo);
+    if (O->vao) glDeleteVertexArrays(1, &O->vao);
 #endif
-        O->vbo = 0;
-    }
+    O->vbo = 0;
+    O->vao = 0;
 }
 
 void obj_set_vert_v(obj *O, int vi, const float v[3])
@@ -1479,14 +1492,14 @@ void obj_set_vert_loc(obj *O, int u, int n, int t, int v)
     O->vloc = v;
 }
 
-void obj_set_prop_loc(obj *O, int pi, int c, int o, int M)
+void obj_set_prop_loc(obj *O, int ki, int c, int o, int M)
 {
     assert(O);
-    assert(0 <= pi && pi <= 4);
+    assert(0 <= ki && ki < OBJ_PROP_COUNT);
 
-    O->cloc[pi] = c;
-    O->oloc[pi] = o;
-    O->Mloc[pi] = M;
+    O->cloc[ki] = c;
+    O->oloc[ki] = o;
+    O->Mloc[ki] = M;
 }
 
 /*============================================================================*/
@@ -2120,7 +2133,6 @@ static void obj_render_prop(const obj *O, int mi, int ki)
         /* Bind the property map. */
 
         glBindTexture(GL_TEXTURE_2D, kp->map);
-        glEnable(GL_TEXTURE_2D);
 
         /* Apply the property options. */
 
@@ -2131,56 +2143,44 @@ static void obj_render_prop(const obj *O, int mi, int ki)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 
         /* Apply the texture coordinate offset and scale. */
-#if 0
-        glMatrixMode(GL_TEXTURE);
+
+        if (O->Mloc[ki] >= 0)
         {
-            glLoadIdentity();
-            glTranslatef(kp->o[0], kp->o[1], kp->o[2]);
-            glScalef    (kp->s[0], kp->s[1], kp->s[2]);
+            GLfloat T[16];
+
+            memset(T, 0, sizeof (T));
+
+            T[ 0] = kp->s[0];
+            T[ 5] = kp->s[1];
+            T[10] = kp->s[2];
+            T[12] = kp->o[0];
+            T[13] = kp->o[1];
+            T[14] = kp->o[2];
+            T[15] = 1.0f;
+
+            glUniformMatrix4fv(O->Mloc[ki], 1, GL_FALSE, T);
         }
-        glMatrixMode(GL_MODELVIEW);
-#endif
     }
 }
 
 void obj_render_mtrl(const obj *O, int mi)
 {
-    /* Bind the material texture maps. */
+    int ki;
 
-    if (obj_get_mtrl_map(O, mi, OBJ_NS))
+    /* Bind all material properties and texture maps. */
+
+    for (ki = 0; ki < OBJ_PROP_COUNT; ki++)
     {
-        glActiveTexture(GL_TEXTURE3);
-        obj_render_prop(O, mi, OBJ_NS);
+        if (O->oloc[ki] >= 0 && obj_get_mtrl_map(O, mi, ki))
+        {
+            glActiveTexture(GL_TEXTURE0 + ki);
+            obj_render_prop(O, mi, ki);
+            glUniform1i(O->oloc[ki], ki);
+        }
+        if (O->cloc[ki] >= 0)
+            glUniform4fv(O->cloc[ki], 1, O->mv[mi].kv[ki].c);
     }
-
-    if (obj_get_mtrl_map(O, mi, OBJ_KS))
-    {
-        glActiveTexture(GL_TEXTURE2);
-        obj_render_prop(O, mi, OBJ_KS);
-    }
-
-    if (obj_get_mtrl_map(O, mi, OBJ_KA))
-    {
-        glActiveTexture(GL_TEXTURE1);
-        obj_render_prop(O, mi, OBJ_KA);
-    }
-
-    if (obj_get_mtrl_map(O, mi, OBJ_KD))
-    {
-        glActiveTexture(GL_TEXTURE0);
-        obj_render_prop(O, mi, OBJ_KD);
-    }
-
     glActiveTexture(GL_TEXTURE0);
-
-    /* Apply the material properties. */
-#if 0
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   O->mv[mi].kv[OBJ_KD].c);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,   O->mv[mi].kv[OBJ_KA].c);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION,  O->mv[mi].kv[OBJ_KE].c);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  O->mv[mi].kv[OBJ_KS].c);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, O->mv[mi].kv[OBJ_NS].c);
-#endif
 }
 
 void obj_render_surf(const obj *O, int si)
@@ -2209,8 +2209,6 @@ void obj_render_surf(const obj *O, int si)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sp->libo);
             glDrawElements(GL_LINES, 2 * sp->lc, GL_INDEX_T, (const GLvoid *) 0);
         }
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 }
 
@@ -2220,12 +2218,13 @@ void obj_render(obj *O)
 
     assert(O);
 
-    /* Load the vertex buffer. */
+    /* Initialize the vertex arrays. */
 
     obj_init(O);
-    glBindVertexArray(O->vao);
 
     /* Render each surface. */
+
+    glBindVertexArray(O->vao);
 
     for (si = 0; si < O->sc; ++si)
         obj_render_surf(O, si);

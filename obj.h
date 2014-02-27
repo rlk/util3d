@@ -27,11 +27,15 @@ extern "C" {
 
 /*============================================================================*/
 
-#define OBJ_KD 0
-#define OBJ_KA 1
-#define OBJ_KE 2
-#define OBJ_KS 3
-#define OBJ_NS 4
+enum {
+	OBJ_KD,
+	OBJ_KA,
+	OBJ_KE,
+	OBJ_KS,
+	OBJ_NS,
+	OBJ_KN,
+	OBJ_PROP_COUNT
+};
 
 #define OBJ_OPT_CLAMP  1
 
@@ -82,7 +86,7 @@ void obj_set_line(obj *, int, int, const int *);
 void obj_set_surf(obj *, int, int);
 
 void obj_set_vert_loc(obj *, int, int, int, int);
-void obj_set_mtrl_loc(obj *, int, int, int, int);
+void obj_set_prop_loc(obj *, int, int, int, int);
 
 /*----------------------------------------------------------------------------*/
 
