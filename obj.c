@@ -292,23 +292,25 @@ struct tga_head
 void *read_tga(const char *filename, int *w, int *h, int *d)
 {
     struct tga_head head;
+    FILE *stream;
 
-    if (FILE *stream = fopen(filename, "rb"))
+    if ((stream = fopen(filename, "rb")))
     {
         if (fread(&head, sizeof (struct tga_head), 1, stream) == 1)
         {
             if (head.image_type == 2)
             {
-                *w = int(head.image_width);
-                *h = int(head.image_height);
-                *d = int(head.image_depth);
+                *w = (int) head.image_width;
+                *h = (int) head.image_height;
+                *d = (int) head.image_depth;
 
                 if (fseek(stream, head.id_length, SEEK_CUR) == 0)
                 {
                     size_t s = (*d) / 8;
                     size_t n = (*w) * (*h);
+                    void *p;
 
-                    if (void *p = calloc(n, s))
+                    if ((p = calloc(n, s)))
                     {
                         if (fread(p, s, n, stream) == n)
                         {
@@ -1490,6 +1492,8 @@ void obj_set_vert_loc(obj *O, int u, int n, int t, int v)
     O->nloc = n;
     O->tloc = t;
     O->vloc = v;
+
+    invalidate(O);
 }
 
 void obj_set_prop_loc(obj *O, int ki, int c, int o, int M)
