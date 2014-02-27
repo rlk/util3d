@@ -1,6 +1,6 @@
 # obj
 
-`obj` loads, manipulates, optimizes, renders, and stores 3D geometry using the Wavefront OBJ file format.
+`obj` loads, manipulates, optimizes, renders, and stores 3D geometry using the Wavefront OBJ file format. The renderer uses the OpenGL 3.2 Core Profile, making it compatible with OpenGL versions 3 and 4, OpenGL ES 2.0, and also commonly-available extended implementations of OpenGL 2.1.
 
 -   [obj.c](obj.c)
 -   [obj.h](obj.h)
@@ -11,9 +11,13 @@ OBJ files are referenced using pointers to type `obj`. The elements within the O
 
 ## Compilation
 
-To use this module, simply link it with your own code. It requires OpenGL, [GLEW](http://glew.sourceforge.net/), and the [`image`](image.html) utility.
+To use this module, simply link it with your own code. The renderer requires OpenGL. Linux and Windows compilation also requires [GLEW](http://glew.sourceforge.net/), though OSX's native OpenGL support suffices.
 
-    cc -o program program.c obj.c image.c -ljpeg -lpng -lz -lGLEW -lGL -lm
+    cc -o program program.c obj.c -lGLEW -lGL -lm
+
+If used only to process OBJ files and not to render them, the OpenGL dependency may be eliminated by defining `CONF_NO_GL`.
+
+    cc -o program program.c obj.c -DCONF_NO_GL
 
 ## Quickstart
 
@@ -47,13 +51,43 @@ As we've just seen, the top level API for manipulation OBJ files is as follows:
 
     Delete OBJ `O` and release all resources held by it.
 
+### Rendering
+
 - `void obj_render(obj *O)`
 
     Render OBJ `O`. The polygons and lines of all surfaces are rendered using their assigned materials. Aside from materials and textures, no OpenGL state is modified. In particular, any bound vertex and fragment shaders execute as expected.
 
-Tangent vectors are bound to vertex attribute location 6. Applications may take advantage of them by binding this location to a GLSL attribute like so:
+- `void obj_set_vert_loc(obj *O, int u, int n, int t, int v)`
 
-    glBindAttribLocation(program, 6, "tangent");
+    Set the vertex attribute locations for the tangent, normal, texture coordinate, and position. These are acquired by calling [`glGetAttribLocation`](http://www.opengl.org/sdk/docs/man/html/glGetAttribLocation.xhtml) with the intended shader program. Pass `-1` for the location of any attribue that the shader does not receive.
+
+    For example, if program object `program` declares `in` varibles named `vTangent`, `vNormal`, `vTexCoord` and `vPosition` then the syntax is:
+
+        obj_set_vert_loc(object, glGetAttribLocation(program, "vTangent"),
+                                 glGetAttribLocation(program, "vNormal"),
+                                 glGetAttribLocation(program, "vTexCoord"),
+                                 glGetAttribLocation(program, "vPosition"));
+
+
+- `void obj_set_prop_loc(obj *O, int ki, int c, int o, int M)`
+
+    Set the uniform location for the color, texture sampler index, or texture transform for material property `ki`. Pass `-1` for the location of any uniform that the shader does not receive. The value of `ki` must be one of the following:
+
+    <table style="margin: auto">
+      <tr><td><code>OBJ_KD</code></td><td>Diffuse color</td></tr>
+      <tr><td><code>OBJ_KA</code></td><td>Ambient color</td></tr>
+      <tr><td><code>OBJ_KE</code></td><td>Emissive color</td></tr>
+      <tr><td><code>OBJ_KS</code></td><td>Specular color</td></tr>
+      <tr><td><code>OBJ_NS</code></td><td>Specular exponent</td></tr>
+      <tr><td><code>OBJ_KN</code></td><td>Normal</td></tr>
+    </table>
+
+    For example, if program object `program` declares diffuse and normal samplers named `DiffuseTexture` and `NormalTexture`, but no colors, transforms, or other material properties, then the syntax is:
+
+        obj_set_prop_loc(object, OBJ_KD, -1, glGetUniformLocation(program, "DiffuseTexture"), -1);
+        obj_set_prop_loc(object, OBJ_KN, -1, glGetUniformLocation(program, "NormalTexture"), -1);
+
+    The material color will be set using `glUniform4fv`, the sampler index with `glUniform1i`, and the texture transform with `glUniformMatrix4fv`.
 
 ### Element Creation
 
@@ -122,17 +156,7 @@ Note: The element deletion API goes to great lengths to ensure that all geometry
 
 - `void obj_set_mtrl_map(obj *O, int mi, int ki, const char *image)`
 
-    Set the image map to be used for diffuse color, ambient color, emissive color, specular color, or specular exponent of material `mi` of OBJ `O`. The named file must be of one of the supported image formats, usually PNG, TIFF, JPEG, or OpenEXR depending on the [configuration options](image.html) specified at compile time.
-
-The `ki` argument selects the property to be set. It must be one of the following:
-
-<table style="margin: auto">
-  <tr><td><code>OBJ_KD</code></td><td>Diffuse color</td></tr>
-  <tr><td><code>OBJ_KA</code></td><td>Ambient color</td></tr>
-  <tr><td><code>OBJ_KE</code></td><td>Emissive color (a non-standard extension)</td></tr>
-  <tr><td><code>OBJ_KS</code></td><td>Specular color</td></tr>
-  <tr><td><code>OBJ_NS</code></td><td>Specular exponent</td></tr>
-</table>
+    Set the image map to be used for diffuse color, ambient color, emissive color, specular color, specular exponent, or normal map of material `mi` of OBJ `O`. As of this writing, the file must be given in Targa (`.TGA`) 24-bit or 32-bit format.
 
 - `void obj_set_mtrl_opt(obj *O, int mi, int ki, unsigned int opt)`
 
@@ -237,26 +261,6 @@ The `ki` argument selects the property to be set. It must be one of the followin
 Proper selection of `qc` is crucial. Overestimating the cache size will result in bad performance. It is safe to assume a cache size of 16. Recent video hardware provides cache sizes up to 32. Average-case analysis indicates that future video hardware is unlikely to increase cache size far beyond 32.
 
 Optimal sorting is NP-complete. This implementation is fast (linear in the number of triangles) but not optimal. There is no guarantee that a sorted model will have a lower ACMR than the original unsorted model. Paranoid applications should confirm that sorting reduces the ACMR and reload the model if it does not.
-
-#### Rendering
-
-The primary rendering function `obj_render` is defined in the top level API. The following functions allow for piece-wise rendering and the independant application of vertex and material state, if desired.
-
-- `void obj_draw_vert(obj *O)`
-
-    Bind the vertex buffer object of OBJ `O`. The application may then render selected vertices using `glDrawElements`, `glDrawArrays`, etc.
-
-- `void obj_draw_mtrl(obj *O, int mi)`
-
-    Apply material `mi` of OBJ `O`. Any rendering subsequently performed by the application will use this material.
-
-- `void obj_draw_surf(obj *O, int si)`
-
-    Draw all polygons and lines in surface `si` of OBJ `O`. Rendering will use any material and vertex buffer previously set by the application. It is recommended that applications bind the file's own vertex buffer using `obj_draw_vert` prior to rendering a surface in that file.
-
-- `void obj_draw_axes(obj *O, float length)`
-
-    Draw the tangent-space basis vectors (normal, tangent, and bitangent) of all vertices of OBJ `O`.
 
 #### Exporting
 
