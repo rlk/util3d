@@ -8,7 +8,7 @@
 /* Software is furnished to do so, subject to the following conditions:       */
 /*                                                                            */
 /* The above copyright notice and this permission notice shall be included in */
-/* all copies or substantial portions of the Software.                        */
+/* all copies or substantial portions of the Software.                       */
 /*                                                                            */
 /* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR */
 /* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   */
@@ -16,7 +16,7 @@
 /* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER */
 /* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING    */
 /* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER        */
-/* DEALINGS IN THE SOFTWARE.                                                  */
+/* DEALINGS IN THE SOFTWARE.                                                 */
 
 #include <stdio.h>
 #include <ctype.h>
@@ -666,7 +666,7 @@ static int read_poly_vertices(const char *line, obj *O, int gi)
                     _iv[_ij]._ni == _ni &&
                     _iv[_ij]. gi ==  gi)
                 {
-                    /* A repeat has been found.  Link new to old. */
+                    /* A repeat has been found. Link new to old. */
 
                     _vv[_vi]._ii = _ii;
                     _iv[_ii]._ii = _ij;
@@ -704,7 +704,7 @@ static void read_f(const char *line, obj *O, int si, int gi)
     float t[3];
     int i, pi;
 
-    /* Create new vertices references for this face. */
+    /* Create new vertex references for this face. */
 
     int i0 = _ic;
     int ic = read_poly_vertices(line, O, gi);
@@ -796,7 +796,7 @@ static int read_line_vertices(const char *line, obj *O)
                 if (_iv[_ij]._vi == _vi &&
                     _iv[_ij]._ti == _ti)
                 {
-                    /* A repeat has been found.  Link new to old. */
+                    /* A repeat has been found. Link new to old. */
 
                     _vv[_vi]._ii = _ii;
                     _iv[_ii]._ii = _ij;
@@ -1254,7 +1254,7 @@ void obj_del_vert(obj *O, int vi)
 
     for (si = 0; si < O->sc; ++si)
     {
-        /* Delete all referencing polygons.  Decrement later references. */
+        /* Delete all referencing polygons. Decrement later references. */
 
         for (pi = O->sv[si].pc - 1; pi >= 0; --pi)
         {
@@ -1270,7 +1270,7 @@ void obj_del_vert(obj *O, int vi)
             }
         }
 
-        /* Delete all referencing lines.  Decrement later references. */
+        /* Delete all referencing lines. Decrement later references. */
 
         for (li = O->sv[si].lc - 1; li >= 0; --li)
         {
@@ -1693,7 +1693,7 @@ void obj_proc(obj *O)
 
     assert(O);
 
-    /* Normalize all normals.  Zero all tangent vectors. */
+    /* Normalize all normals. Zero all tangent vectors. */
 
     for (vi = 0; vi < O->vc; ++vi)
     {
@@ -2354,6 +2354,7 @@ static void obj_write_mtl(const obj *O, const char *mtl)
             obj_write_map(fout, O, mi, OBJ_KA, "Ke");
             obj_write_map(fout, O, mi, OBJ_KS, "Ks");
             obj_write_map(fout, O, mi, OBJ_NS, "Ns");
+            obj_write_map(fout, O, mi, OBJ_KN, "Kn");
         }
     }
     fclose(fout);

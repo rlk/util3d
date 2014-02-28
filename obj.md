@@ -53,10 +53,6 @@ As we've just seen, the top level API for manipulation OBJ files is as follows:
 
 ### Rendering
 
-- `void obj_render(obj *O)`
-
-    Render OBJ `O`. The polygons and lines of all surfaces are rendered using their assigned materials. Aside from materials and textures, no OpenGL state is modified. In particular, any bound vertex and fragment shaders execute as expected.
-
 - `void obj_set_vert_loc(obj *O, int u, int n, int t, int v)`
 
     Set the vertex attribute locations for the tangent, normal, texture coordinate, and position. These are acquired by calling [`glGetAttribLocation`](http://www.opengl.org/sdk/docs/man/html/glGetAttribLocation.xhtml) with the intended shader program. Pass `-1` for the location of any attribue that the shader does not receive.
@@ -88,6 +84,10 @@ As we've just seen, the top level API for manipulation OBJ files is as follows:
         obj_set_prop_loc(object, OBJ_KN, -1, glGetUniformLocation(program, "NormalTexture"), -1);
 
     The material color will be set using `glUniform4fv`, the sampler index with `glUniform1i`, and the texture transform with `glUniformMatrix4fv`.
+
+- `void obj_render(obj *O)`
+
+    Render OBJ `O`. The polygons and lines of all surfaces are rendered using their assigned materials. Aside from materials and textures, no OpenGL state is modified. In particular, any bound vertex and fragment shaders execute as expected.
 
 ### Element Creation
 
