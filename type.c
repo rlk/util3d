@@ -369,31 +369,31 @@ static int line_set(vert *v, sort *S, int s, int x, float k, const double *M)
 
     /* Set the attributes of each vertex. */
 
-    v[0].v[0] = M[0] * vl + M[4] * vb + M[12];
-    v[0].v[1] = M[1] * vl + M[5] * vb + M[13];
-    v[0].v[2] = M[2] * vl + M[6] * vb + M[14];
+    v[0].v[0] = (float) (M[0] * vl + M[4] * vb + M[12]);
+    v[0].v[1] = (float) (M[1] * vl + M[5] * vb + M[13]);
+    v[0].v[2] = (float) (M[2] * vl + M[6] * vb + M[14]);
     v[0].t[0] = tl;
     v[0].t[1] = tb;
 
-    v[1].v[0] = M[0] * vr + M[4] * vb + M[12];
-    v[1].v[1] = M[1] * vr + M[5] * vb + M[13];
-    v[1].v[2] = M[2] * vr + M[6] * vb + M[14];
+    v[1].v[0] = (float) (M[0] * vr + M[4] * vb + M[12]);
+    v[1].v[1] = (float) (M[1] * vr + M[5] * vb + M[13]);
+    v[1].v[2] = (float) (M[2] * vr + M[6] * vb + M[14]);
     v[1].t[0] = tr;
     v[1].t[1] = tb;
 
-    v[2].v[0] = M[0] * vr + M[4] * vt + M[12];
-    v[2].v[1] = M[1] * vr + M[5] * vt + M[13];
-    v[2].v[2] = M[2] * vr + M[6] * vt + M[14];
+    v[2].v[0] = (float) (M[0] * vr + M[4] * vt + M[12]);
+    v[2].v[1] = (float) (M[1] * vr + M[5] * vt + M[13]);
+    v[2].v[2] = (float) (M[2] * vr + M[6] * vt + M[14]);
     v[2].t[0] = tr;
     v[2].t[1] = tt;
 
-    v[3].v[0] = M[0] * vl + M[4] * vt + M[12];
-    v[3].v[1] = M[1] * vl + M[5] * vt + M[13];
-    v[3].v[2] = M[2] * vl + M[6] * vt + M[14];
+    v[3].v[0] = (float) (M[0] * vl + M[4] * vt + M[12]);
+    v[3].v[1] = (float) (M[1] * vl + M[5] * vt + M[13]);
+    v[3].v[2] = (float) (M[2] * vl + M[6] * vt + M[14]);
     v[3].t[0] = tl;
     v[3].t[1] = tt;
 
-    return x + S->a * k;
+    return (int) (x + S->a * k);
 }
 
 static int layout(vert *v, const char *str, int exp, double *mat, font *F)
@@ -426,7 +426,7 @@ static int layout(vert *v, const char *str, int exp, double *mat, font *F)
 
         if (c == ' ')
         {
-            x += F->a * F->k + (exp * (e + 1) / s) - (exp * e / s);
+            x += (int) (F->a * F->k + (exp * (e + 1) / s) - (exp * e / s));
             e += 1;
         }
         else if ((S = font_sort_search(F, c)))
@@ -541,14 +541,14 @@ int line_length(const char *str, font *F)
 
         if (c == ' ')
         {
-            x += F->a * F->k;
+            x += (int) (F->a * F->k);
         }
         else if ((S = font_sort_search(F, c)))
         {
             r = FT_Get_Char_Index(F->face, c);
                 FT_Get_Kerning   (F->face, l, r, FT_KERNING_DEFAULT, &k);
             l = r;
-            x += S->a * F->k;
+            x += (int) (S->a * F->k);
         }
 
     return x;
