@@ -124,7 +124,7 @@ int check_program_log(GLuint program)
 
 /*----------------------------------------------------------------------------*/
 
-GLuint glsl_init_shader(GLenum type, const char *str, const int len)
+GLuint glsl_init_shader(GLenum type, const char *str, int len)
 {
     if (str)
     {
